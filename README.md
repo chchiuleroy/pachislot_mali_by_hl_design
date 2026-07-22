@@ -218,13 +218,13 @@ $$E_{\text{mystery}} = \tfrac{1}{5}(75+100+150+200+250) = 155$$
 
 $$E_{\text{cell}} = \tfrac{1}{6}(10+15+20+30+50+70) = 32.5$$
 
-$$E_{\text{mali\_val}} = \frac{100 + 150 + E_{\text{mystery}} + 13 \cdot E_{\text{cell}}}{16} = \frac{827.5}{16} \approx 51.72$$
+$$E_{\text{mali-val}} = \frac{100 + 150 + E_{\text{mystery}} + 13 \cdot E_{\text{cell}}}{16} = \frac{827.5}{16} \approx 51.72$$
 
 **Bonus RTP 閉式解**（每 FS 種類的觸發率 × 固定 spin 數 × Mali 期望 × FS 倍率）：
 
-$$\boxed{\text{RTP}_{\text{bonus}} = \sum_{y \in \text{FS}} P_{\text{trigger}}(y) \cdot n_{\text{spins}}(y) \cdot E_{\text{mali\_val}} \cdot \frac{\text{fs\_mult}(y)}{B}}$$
+$$\boxed{\text{RTP}_{\text{bonus}} = \sum_{y \in \text{FS}} P_{\text{trigger}}(y) \cdot n_{\text{spins}}(y) \cdot E_{\text{mali-val}} \cdot \frac{\text{fs-mult}(y)}{B}}$$
 
-其中 $n_{\text{spins}}(y) = 10$ (三種 FS 一致)，$\text{fs\_mult} \in \{2, 3, 5\}$（Red/Blue/Gold 7）。
+其中 $n_{\text{spins}}(y) = 10$ (三種 FS 一致)，$\text{fs-mult} \in \{2, 3, 5\}$（Red/Blue/Gold 7）。
 
 #### 🧮 Total & Monte Carlo 校核
 
@@ -248,10 +248,10 @@ $$\text{RTP}_{\text{total}} = \text{RTP}_{\text{base}} + \text{RTP}_{\text{bonus
 
 **合體用 Law of Total Variance**：
 
-$$\operatorname{Var}(X) = \mathbb{E}_o\bigl[\operatorname{Var}(X \mid o)\bigr] + \operatorname{Var}_o\bigl(\mathbb{E}[X \mid o]\bigr)$$
+$$\mathrm{Var}(X) = \mathbb{E}_o\bigl[\mathrm{Var}(X \mid o)\bigr] + \mathrm{Var}_o\bigl(\mathbb{E}[X \mid o]\bigr)$$
 
-- no-FS outcome：$\mathbb{E}[X \mid o] = \text{base\_win}$，$\operatorname{Var}[X \mid o] = 0$
-- FS_i outcome：$\mathbb{E}[X \mid o] = \text{base\_win} + \mu_i$，$\operatorname{Var}[X \mid o] = \sigma_i^2$
+- no-FS outcome：$\mathbb{E}[X \mid o] = \text{base-win}$，$\mathrm{Var}[X \mid o] = 0$
+- FS$_i$ outcome：$\mathbb{E}[X \mid o] = \text{base-win} + \mu_i$，$\mathrm{Var}[X \mid o] = \sigma_i^2$
 
 單次成本：bonus MC 500k ≈ 28s + exact enumeration ≈ 15s（純 Python，可 numpy vectorize 到 <1s）。
 
