@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pachislot Little Mary Edition</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --panel-bg: #2d2d2d;
+            --accent-color: #f39c12;
+            --text-color: #ecf0f1;
+            --reel-bg: #ecf0f1;
+            --reel-border: #34495e;
+            --win-color: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Weather Canvas */
+        #weather-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0; 
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+
+        /* Layout */
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .left-panel, .right-panel {
+            flex: 1;
+            padding: 20px;
+            background-color: rgba(45, 45, 45, 0.9); 
+            overflow-y: auto;
+            border-right: 1px solid #444;
+            border-left: 1px solid #444;
+            z-index: 2;
+        }
+
+        .center-panel {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Paytable */
+        table.paytable {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        
+        table.paytable th, table.paytable td {
+            padding: 8px;
+            border-bottom: 1px solid #555;
+            text-align: center;
+        }
+
+        table.paytable th {
+            background-color: #444;
+        }
+
+        .symbol-icon {
+            font-size: 1.5em;
+        }
+
+        /* Game Area */
+        .machine-container {
+            background: #000;
+            padding: 20px;
+            border-radius: 15px;
+            border: 5px solid var(--accent-color);
+            box-shadow: 0 0 20px rgba(243, 156, 18, 0.3);
+            position: relative;
+        }
+
+        .reels {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .reel-col {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .reel {
+            width: 140px;
+            height: 420px; 
+            background-color: var(--reel-bg);
+            border: 3px solid var(--reel-border);
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .reel-strip {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .symbol {
+            height: 140px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5em;
+            border-bottom: 1px solid #ccc;
+            box-sizing: border-box;
+            color: #333;
+        }
+
+        .symbol.blur {
+            filter: blur(5px);
+            color: transparent;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        /* Stop Buttons */
+        .stop-buttons {
+            display: flex;
+            gap: 25px; 
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .stop-btn {
+            width: 140px; 
+            padding: 15px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 1.2em;
+            cursor: pointer;
+            box-shadow: 0 4px #c0392b;
+        }
+
+        .stop-btn:active {
+            box-shadow: 0 0 #c0392b;
+            transform: translateY(4px);
+        }
+
+        .stop-btn:disabled {
+            background-color: #7f8c8d;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: translateY(4px);
+        }
+
+        /* Info Panel */
+        .info-panel {
+            display: flex;
+            gap: 20px;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            background: #222;
+            padding: 15px 30px;
+            border-radius: 10px;
+        }
+
+        .bet-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background-color: var(--accent-color);
+            border: none;
+            border-radius: 3px;
+            color: #000;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .btn:hover { opacity: 0.9; }
+
+        /* Logs */
+        .log-entry {
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #444;
+            font-size: 1.1em;
+        }
+        .log-win { color: var(--accent-color); font-weight: bold; font-size: 1.2em; }
+        .log-fs { color: #3498db; font-weight: bold; font-size: 1.2em; }
+
+        /* 輪帶預覽（目押參考） */
+        .strip-preview {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #222;
+            border-radius: 8px;
+            border: 1px solid #444;
+            max-height: 40vh;
+            overflow-y: auto;
+        }
+        .strip-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .strip-col-header {
+            text-align: center;
+            font-size: 0.75em;
+            color: #aaa;
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+        .strip-cell {
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95em;
+            background: #2d2d2d;
+            line-height: 1;
+        }
+        .strip-idx {
+            color: #666;
+            font-size: 0.6em;
+            padding-right: 2px;
+        }
+
+        /* Overlay for FS */
+        .fs-indicator {
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #e74c3c;
+            color: white;
+            padding: 10px 30px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 1.5em;
+            display: none;
+            box-shadow: 0 0 20px #e74c3c;
+            white-space: nowrap;
+            z-index: 100;
+        }
+
+        /* --- Little Mary (Mali) Overlay Styles --- */
+        #mali-overlay {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            background: rgba(0,0,0,0.9);
+            z-index: 50;
+            display: none; 
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            
+            /* Rainbow Border Animation */
+            border: 8px solid transparent;
+            background-clip: padding-box;
+            position: absolute;
+        }
+        
+        /* Rainbow rotating border effect */
+        #mali-overlay::before {
+            content: '';
+            position: absolute;
+            top: -8px; left: -8px; right: -8px; bottom: -8px;
+            border-radius: 15px;
+            background: conic-gradient(
+                #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3, #ff0000
+            );
+            z-index: -1;
+            animation: spin-rainbow 2s linear infinite;
+        }
+        
+        @keyframes spin-rainbow {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+
+        .mali-track {
+            display: grid;
+            grid-template-columns: repeat(5, 80px);
+            grid-template-rows: repeat(5, 80px);
+            gap: 10px;
+            position: relative;
+            z-index: 2;
+            background: #222; /* Inner background */
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .mali-cell {
+            width: 80px;
+            height: 80px;
+            background: #333;
+            border: 2px solid #555;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+            color: #fff;
+            box-shadow: inset 0 0 10px #000;
+            font-weight: bold;
+            flex-direction: column;
+        }
+        
+        .mali-cell span.val { font-size: 1.2em; }
+        .mali-cell span.label { font-size: 0.4em; color: #aaa; margin-top: 2px; }
+
+        /* Positioning cells */
+        .cell-0 { grid-column: 1; grid-row: 1; }
+        .cell-1 { grid-column: 2; grid-row: 1; }
+        .cell-2 { grid-column: 3; grid-row: 1; }
+        .cell-3 { grid-column: 4; grid-row: 1; }
+        .cell-4 { grid-column: 5; grid-row: 1; }
+        
+        .cell-5 { grid-column: 5; grid-row: 2; }
+        .cell-6 { grid-column: 5; grid-row: 3; }
+        .cell-7 { grid-column: 5; grid-row: 4; }
+        
+        .cell-8 { grid-column: 5; grid-row: 5; }
+        .cell-9 { grid-column: 4; grid-row: 5; }
+        .cell-10 { grid-column: 3; grid-row: 5; }
+        .cell-11 { grid-column: 2; grid-row: 5; }
+        .cell-12 { grid-column: 1; grid-row: 5; }
+        
+        .cell-13 { grid-column: 1; grid-row: 4; }
+        .cell-14 { grid-column: 1; grid-row: 3; }
+        .cell-15 { grid-column: 1; grid-row: 2; }
+
+        /* Center Info in Mali */
+        .mali-center {
+            grid-column: 2 / span 3;
+            grid-row: 2 / span 3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #f39c12;
+        }
+
+        .mali-active {
+            background: #f1c40f;
+            box-shadow: 0 0 20px #f1c40f, inset 0 0 10px #fff;
+            border-color: #fff;
+            transform: scale(1.1);
+            z-index: 60;
+            color: #000 !important;
+        }
+
+        /* Animations */
+        @keyframes border-pulse {
+            0% { border-color: var(--accent-color); box-shadow: 0 0 20px rgba(243, 156, 18, 0.3); }
+            50% { border-color: #fff; box-shadow: 0 0 50px rgba(255, 255, 255, 0.5); }
+            100% { border-color: var(--accent-color); box-shadow: 0 0 20px rgba(243, 156, 18, 0.3); }
+        }
+        .machine-container.win-anim {
+            animation: border-pulse 0.5s infinite;
+        }
+        
+        @keyframes symbol-flash {
+            0% { transform: scale(1); background-color: rgba(255, 215, 0, 0.2); }
+            50% { transform: scale(1.15); background-color: rgba(255, 215, 0, 0.6); box-shadow: 0 0 20px gold; }
+            100% { transform: scale(1); background-color: rgba(255, 215, 0, 0.2); }
+        }
+        
+        .symbol.winner {
+            animation: symbol-flash 0.8s infinite ease-in-out;
+            z-index: 50;
+            border: 2px solid gold;
+        }
+        
+        .instructions {
+            margin-top: 15px;
+            font-size: 1em;
+            color: #aaa;
+            text-align: center;
+        }
+
+        .kbd {
+            background: #444;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        @keyframes bg-shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); filter: brightness(1.2); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); filter: brightness(1.0); }
+        }
+        .vibrating {
+            animation: bg-shake 0.2s;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="weather-canvas"></canvas>
+
+<div class="container">
+    <!-- LEFT: Paytable -->
+    <div class="left-panel">
+        <h2>賠率表</h2>
+        <p>Wild 只作通配（本身無專屬賠率、無法 wild 滿盤）</p>
+        <p>27 線全盤規則: 只要第 1, 2, 3 輪出現相同符號即中獎；每個 reg 圖案在每輪都有 3-slot cluster，都可打到 27 線滿盤</p>
+        <table class="paytable" id="paytable-body">
+            <!-- Populated by JS -->
+        </table>
+    </div>
+
+    <!-- CENTER: Game -->
+    <div class="center-panel">
+        <div id="fs-display" class="fs-indicator">LITTLE MARY x<span id="fs-mult">1</span> (剩餘: <span id="fs-count">0</span>)</div>
+        
+        <div class="machine-container" id="machine">
+            
+            <!-- Mali Overlay -->
+            <div id="mali-overlay">
+                <div class="mali-track" id="mali-track">
+                    <!-- Generated by JS -->
+                </div>
+            </div>
+
+            <div class="reels">
+                <!-- Reel 1 -->
+                <div class="reel"><div class="reel-strip" id="reel-0"></div></div>
+                <!-- Reel 2 -->
+                <div class="reel"><div class="reel-strip" id="reel-1"></div></div>
+                <!-- Reel 3 -->
+                <div class="reel"><div class="reel-strip" id="reel-2"></div></div>
+            </div>
+
+            <div class="stop-buttons">
+                <button class="stop-btn" id="btn-stop-0" onclick="game.stopReel(0)">STOP 1</button>
+                <button class="stop-btn" id="btn-stop-1" onclick="game.stopReel(1)">STOP 2</button>
+                <button class="stop-btn" id="btn-stop-2" onclick="game.stopReel(2)">STOP 3</button>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <div>信用點數: <span id="balance">10000</span></div>
+            <div>本局贏得: <span id="win-amount">0</span></div>
+        </div>
+
+        <div class="bet-controls">
+            <button class="btn" onclick="game.addCredits()">增加籌碼 (+5000)</button>
+            <span>下注: </span>
+            <button class="btn" onclick="game.changeBet(-1)">-</button>
+            <span id="current-bet" style="font-weight:bold; min-width: 50px; text-align:center;">100</span>
+            <button class="btn" id="btn-start" onclick="game.changeBet(1)">+</button>
+            <button class="btn" id="btn-start" onclick="game.spin()" style="background-color: #2ecc71; margin-left: 15px;">開始 (Enter)</button>
+        </div>
+
+        <div class="instructions">
+            <span class="kbd">Enter</span> 開始轉動 &nbsp;|&nbsp; <span class="kbd">Space</span> 依序停止滾輪
+        </div>
+    </div>
+
+    <!-- RIGHT: Logs -->
+    <div class="right-panel">
+        <h2 style="margin-top:0;">📜 輪帶內容（iter7：Wild cluster 開放 + Wild payout 220，3 輪 125/144/169，共 3.04M 組合）</h2>
+        <p style="font-size:0.85em; color:#aaa; margin-top:0;">iter7 前 33 slot = 10 reg cluster + WILD cluster（offset 30 三輪同停 → Wild 27 線大獎）；同種 FS min gap ≥ 3；panel 可捲動</p>
+        <div class="strip-preview" id="strip-preview"></div>
+
+        <h2>遊戲紀錄 (僅顯示中獎)</h2>
+        <div id="game-log"></div>
+    </div>
+</div>
+
+<script>
+/**
+ * Weather System (Non-Directional / Floating)
+ */
+class WeatherSystem {
+    constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.active = false;
+        this.particles = [];
+        this.type = 'none'; 
+        
+        // For Number Rain event
+        this.burstActive = false;
+        this.burstEndTime = 0;
+        this.burstParticles = [];
+
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.animate();
+    }
+
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    start(type) {
+        this.type = type;
+        this.active = true;
+        this.particles = [];
+        this.burstParticles = [];
+        this.canvas.style.opacity = 1;
+        
+        let count = 150;
+        if (type === 'money') count = 50; // Fewer particles for money
+
+        for(let i=0; i<count; i++) {
+            this.particles.push(this.createParticle(true, type));
+        }
+    }
+
+    stop() {
+        this.active = false;
+        this.canvas.style.opacity = 0;
+        this.burstActive = false;
+    }
+
+    triggerBurst(type, count, duration) {
+        this.burstActive = true;
+        this.burstEndTime = Date.now() + duration;
+        
+        for(let i=0; i<count; i++) {
+            this.burstParticles.push(this.createParticle(true, type));
+        }
+    }
+
+    createParticle(randomPos = false, specificType = null) {
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const type = specificType || this.type;
+        
+        let p = {
+            x: randomPos ? Math.random() * w : Math.random() * w,
+            y: randomPos ? Math.random() * h : -50,
+            speedX: (Math.random() - 0.5) * 3, 
+            speedY: (Math.random() - 0.5) * 3, 
+            size: 0,
+            rotation: Math.random() * 360,
+            rotationSpeed: (Math.random() - 0.5) * 4,
+            color: '',
+            type: type,
+            opacity: Math.random() * 0.5 + 0.5,
+            life: 100 + Math.random() * 100,
+            text: ''
+        };
+
+        if (type === 'snow') {
+            p.color = 'rgba(255, 255, 255, 0.9)';
+            p.size = Math.random() * 3 + 2;
+        } else if (type === 'rain') {
+            p.color = 'rgba(174, 194, 224, 0.7)';
+            p.size = Math.random() * 2 + 1; 
+            p.length = Math.random() * 10 + 5;
+            p.speedX = (Math.random() - 0.5) * 5;
+            p.speedY = (Math.random() - 0.5) * 5;
+        } else if (type === 'sakura') {
+            p.color = '#ffb7c5';
+            p.size = Math.random() * 6 + 4;
+        } else if (type === 'maple') {
+            p.color = '#e67e22';
+            p.size = Math.random() * 8 + 5;
+        } else if (type === 'money') {
+            p.text = '$';
+            p.size = Math.random() * 20 + 20; // Font size
+            p.speedY = Math.random() * 2 + 2; // Fall down
+            p.speedX = (Math.random() - 0.5) * 1;
+            const colors = ['#ffd700', '#2ecc71', '#e74c3c', '#3498db', '#9b59b6', '#ecf0f1'];
+            p.color = colors[Math.floor(Math.random() * colors.length)];
+        } else if (type === 'numbers') {
+            p.text = Math.floor(Math.random() * 10).toString();
+            p.size = Math.random() * 30 + 30;
+            p.speedY = Math.random() * 3 + 2;
+            p.speedX = (Math.random() - 0.5) * 2;
+            p.color = `hsl(${Math.random() * 360}, 80%, 60%)`; // Rainbow
+        }
+        return p;
+    }
+
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        if (!this.active && this.particles.length === 0 && this.burstParticles.length === 0) return;
+
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Process main particles
+        this.processParticles(this.particles, true);
+
+        // Process burst particles
+        if (this.burstActive) {
+            if (Date.now() > this.burstEndTime) {
+                this.burstActive = false;
+                this.burstParticles = []; // Clear immediately or let them fall out? Let's let them fall out
+            }
+        }
+        this.processParticles(this.burstParticles, this.burstActive); 
+    }
+
+    processParticles(arr, respawn) {
+        for (let i = 0; i < arr.length; i++) {
+            let p = arr[i];
+            
+            p.x += p.speedX;
+            p.y += p.speedY;
+            p.rotation += p.rotationSpeed;
+            p.life--;
+
+            this.ctx.globalAlpha = p.opacity;
+
+            if (p.type === 'rain') {
+                this.ctx.beginPath();
+                this.ctx.strokeStyle = p.color;
+                this.ctx.lineWidth = p.size;
+                this.ctx.moveTo(p.x, p.y);
+                this.ctx.lineTo(p.x + p.speedX * 2, p.y + p.speedY * 2); 
+                this.ctx.stroke();
+            } else if (p.type === 'snow') {
+                this.ctx.beginPath();
+                this.ctx.fillStyle = p.color;
+                this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                this.ctx.fill();
+            } else if (p.type === 'money' || p.type === 'numbers') {
+                this.ctx.save();
+                this.ctx.translate(p.x, p.y);
+                this.ctx.rotate(p.rotation * Math.PI / 180);
+                this.ctx.fillStyle = p.color;
+                this.ctx.font = `bold ${p.size}px sans-serif`;
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(p.text, 0, 0);
+                this.ctx.restore();
+            } else {
+                this.ctx.save();
+                this.ctx.translate(p.x, p.y);
+                this.ctx.rotate(p.rotation * Math.PI / 180);
+                this.ctx.fillStyle = p.color;
+                this.ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                this.ctx.restore();
+            }
+            this.ctx.globalAlpha = 1.0;
+
+            // Boundary Check
+            if (p.y > this.canvas.height + 50 || p.life <= 0) {
+                if (respawn && p.type !== 'numbers') { // Don't respawn 'numbers' unless specific logic
+                    // Actually 'money' should respawn. 'numbers' logic is tricky with burst.
+                    // If it's 'money' (main type) -> respawn.
+                    // If it's 'burst' array -> check if burstActive is still true?
+                    // The user said "descend random count... lasts 5 seconds".
+                    // If I simply respawn them while burstActive is true, it creates a continuous stream for 5 seconds.
+                    // If I don't respawn, it's just one wave. "Descend some random count" usually means one wave.
+                    // But "lasts 5 seconds" implies duration. 
+                    // I will let them respawn ONLY if it's main type. Burst particles die.
+                    
+                    if (this.active && p.type === this.type) {
+                         arr[i] = this.createParticle(true); // Respawn main type at random top/pos
+                         arr[i].y = -50;
+                         arr[i].x = Math.random() * this.canvas.width;
+                    } else {
+                        arr.splice(i, 1);
+                        i--;
+                    }
+                } else {
+                    // Burst particles or end of main life
+                    // If burst is active, maybe respawn? Let's just one-shot for "random count".
+                    // If user says "count is 10-20", it means total volume. So no respawn.
+                    arr.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+    }
+}
+
+/**
+ * PachiSlot Game Logic
+ */
+
+const SYMBOLS = [
+    { id: 'WILD', char: '🃏', name: 'Wild', val: 0, type: 'wild', payout: 220, weight: 3 },
+    { id: 'FS1',  char: '🔴', name: 'Red 7 (FS x2)', val: 1, type: 'fs', mult: 2, spins: 10, payout: 0, weight: 7 },
+    { id: 'FS2',  char: '🔵', name: 'Blue 7 (FS x3)', val: 2, type: 'fs', mult: 3, spins: 10, payout: 0, weight: 4 },
+    { id: 'FS3',  char: '🟡', name: 'Gold 7 (FS x5)', val: 3, type: 'fs', mult: 5, spins: 10, payout: 0, weight: 2 },
+    { id: 'S0',   char: '🎰', name: 'BAR', val: 13, type: 'reg', payout: 180, weight: 2 }, 
+    { id: 'S1',   char: '👑', name: 'Crown', val: 4, type: 'reg', payout: 130, weight: 3 },
+    { id: 'S2',   char: '💎', name: 'Diamond', val: 5, type: 'reg', payout: 110, weight: 4 },
+    { id: 'S3',   char: '🔔', name: 'Bell', val: 6, type: 'reg', payout: 80, weight: 5 },
+    { id: 'S4',   char: '🍉', name: 'Watermelon', val: 7, type: 'reg', payout: 70, weight: 6 },
+    { id: 'S5',   char: '🍇', name: 'Grape', val: 8, type: 'reg', payout: 60, weight: 7 },
+    { id: 'S6',   char: '🍊', name: 'Orange', val: 9, type: 'reg', payout: 50, weight: 8 },
+    { id: 'S7',   char: '🍋', name: 'Lemon', val: 10, type: 'reg', payout: 45, weight: 9 },
+    { id: 'S8',   char: '🍒', name: 'Cherry', val: 11, type: 'reg', payout: 40, weight: 10 },
+    { id: 'S9',   char: '🍀', name: 'Clover', val: 12, type: 'reg', payout: 35, weight: 12 }
+];
+
+const MALI_PRIZES = [10, 15, 20, 30, 50, 70]; 
+
+// Dynamic generation based on Multiplier
+function generateMaliItems(multiplier) {
+    // Fixed items: 2 big prizes
+    const fixed = [
+        { type: 'coin', val: 100, char: '💵', color: '#2ecc71' },
+        { type: 'coin', val: 150, char: '👑', color: '#f1c40f' }
+    ];
+
+    // Special Mystery Item (replaces fixed random prize)
+    const specialItem = { type: 'mystery', val: 0, char: '❓', color: '#9b59b6' };
+    
+    // Add the selected item
+    fixed.push(specialItem);
+
+    // Fill remaining 13 slots
+    const filled = [];
+    // Ensure there are enough common prizes to fill remaining slots
+    const commonPrizesExtended = [...MALI_PRIZES, ...MALI_PRIZES, ...MALI_PRIZES]; // More common prizes for variety
+    for(let i=0; i<13; i++) {
+        const val = commonPrizesExtended[Math.floor(Math.random() * commonPrizesExtended.length)];
+        filled.push({ type: 'coin', val: val, char: '💰', color: '#ecf0f1' });
+    }
+
+    // Combine and shuffle
+    const all = [...fixed, ...filled];
+    for (let i = all.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [all[i], all[j]] = [all[j], all[i]];
+    }
+    return all;
+}
+
+const BET_STEPS = [100, 200, 500, 1000, 1500];
+
+// SYM_BY_ID: O(1) lookup for reel strip resolution
+const SYM_BY_ID = Object.fromEntries(SYMBOLS.map(s => [s.id, s]));
+
+// SPIN_SPEED_MS: 每 slot 前進間隔（ms）。100ms/slot = 10 slot/秒，人類反應約 200ms 可鎖 2 slot 內
+// 想更難目押 → 降到 50ms（20 slot/秒）；想更簡單 → 升到 200ms（5 slot/秒）
+const SPIN_SPEED_MS = 100;
+
+// REEL_STRIPS: 物理輪帶（iter7：L=125/144/169，3,042,000 組合）
+// iter7 vs iter6：加 Wild cluster prefix [WILD]*3 於 slot [30:33]
+//   → 三輪同停 offset 30 → Wild 27 線大獎（機率 = 1/L1·L2·L3 = 3.29e-7）
+//   → RTP=93.44%，σ=308.48（+21% vs iter6），P(X=0)=64.46%，中位玩家撐 752 spin
+// prefix layout：[S0..S9]*3 [WILD]*3（33 slot），其後 shuffled
+// 詳見 iter7_wild_cluster.py, wiki [[concept_slot_rtp_calibration_hl]] iter6-7
+const REEL_STRIPS = [
+    // Reel 0 (L=125)
+    ['S0', 'S0', 'S0', 'S1', 'S1', 'S1', 'S2', 'S2', 'S2', 'S3', 'S3', 'S3', 'S4', 'S4', 'S4', 'S5', 'S5', 'S5', 'S6', 'S6', 'S6', 'S7', 'S7', 'S7', 'S8', 'S8', 'S8', 'S9', 'S9', 'S9', 'WILD', 'WILD', 'WILD', 'S5', 'WILD', 'S9', 'S7', 'S9', 'S7', 'S8', 'FS1', 'S8', 'S9', 'S9', 'S8', 'FS1', 'S4', 'FS3', 'S8', 'S9', 'S2', 'FS1', 'S9', 'S7', 'FS1', 'S9', 'S8', 'S5', 'S6', 'S6', 'FS2', 'S6', 'S8', 'S7', 'S4', 'S7', 'FS1', 'S5', 'WILD', 'S8', 'FS1', 'WILD', 'S4', 'S6', 'FS2', 'S5', 'S9', 'S5', 'S7', 'WILD', 'WILD', 'FS1', 'S9', 'S5', 'S6', 'S5', 'S4', 'FS1', 'FS2', 'S2', 'FS1', 'S7', 'S6', 'S4', 'S6', 'S7', 'S8', 'S9', 'FS3', 'S6', 'S7', 'S7', 'S9', 'S7', 'S4', 'S9', 'WILD', 'FS2', 'S6', 'S8', 'S2', 'S8', 'FS3', 'S9', 'S5', 'FS1', 'FS2', 'WILD', 'S9', 'S8', 'FS2', 'S8', 'WILD', 'WILD', 'FS1'],
+    // Reel 1 (L=144)
+    ['S0', 'S0', 'S0', 'S1', 'S1', 'S1', 'S2', 'S2', 'S2', 'S3', 'S3', 'S3', 'S4', 'S4', 'S4', 'S5', 'S5', 'S5', 'S6', 'S6', 'S6', 'S7', 'S7', 'S7', 'S8', 'S8', 'S8', 'S9', 'S9', 'S9', 'WILD', 'WILD', 'WILD', 'S9', 'S7', 'WILD', 'S4', 'FS3', 'S7', 'S4', 'FS2', 'S4', 'S5', 'FS1', 'S9', 'S8', 'S8', 'S6', 'S5', 'S5', 'WILD', 'S7', 'S7', 'S2', 'S9', 'S3', 'FS3', 'S7', 'S2', 'S9', 'WILD', 'WILD', 'S9', 'S8', 'FS2', 'S8', 'S6', 'S6', 'FS2', 'FS1', 'S7', 'S8', 'S4', 'S8', 'S6', 'WILD', 'FS1', 'S9', 'S8', 'S5', 'S8', 'FS1', 'S6', 'S8', 'FS1', 'S0', 'FS2', 'WILD', 'S6', 'FS1', 'FS2', 'S8', 'S6', 'S9', 'FS1', 'S9', 'S7', 'S9', 'S5', 'S6', 'S8', 'WILD', 'S5', 'FS1', 'S7', 'S6', 'FS2', 'S5', 'S9', 'S7', 'S4', 'FS1', 'S7', 'S6', 'FS1', 'WILD', 'S7', 'S9', 'S4', 'S9', 'S8', 'S7', 'S9', 'S2', 'S4', 'S9', 'S6', 'FS3', 'FS1', 'S9', 'S9', 'S9', 'S5', 'S8', 'S8', 'S5', 'S7', 'WILD', 'S2', 'FS3', 'S4', 'S8', 'FS2', 'FS1'],
+    // Reel 2 (L=169)
+    ['S0', 'S0', 'S0', 'S1', 'S1', 'S1', 'S2', 'S2', 'S2', 'S3', 'S3', 'S3', 'S4', 'S4', 'S4', 'S5', 'S5', 'S5', 'S6', 'S6', 'S6', 'S7', 'S7', 'S7', 'S8', 'S8', 'S8', 'S9', 'S9', 'S9', 'WILD', 'WILD', 'WILD', 'S2', 'S7', 'S8', 'S7', 'S5', 'S7', 'S9', 'S5', 'FS2', 'FS1', 'S8', 'WILD', 'S7', 'S7', 'S8', 'S7', 'S7', 'WILD', 'S8', 'S5', 'S9', 'S9', 'S2', 'FS1', 'FS2', 'S7', 'WILD', 'S6', 'WILD', 'S9', 'FS2', 'S3', 'S2', 'S5', 'S9', 'S5', 'S6', 'FS1', 'FS3', 'S5', 'S9', 'S8', 'FS1', 'S6', 'S4', 'FS3', 'S6', 'S9', 'FS1', 'S6', 'S2', 'FS1', 'S1', 'S5', 'S8', 'FS2', 'S5', 'FS1', 'S4', 'S9', 'S9', 'S8', 'S7', 'FS2', 'S8', 'S9', 'S7', 'FS3', 'S4', 'FS1', 'S4', 'FS3', 'FS1', 'S9', 'S3', 'S6', 'S8', 'FS1', 'S8', 'S9', 'S6', 'S4', 'S8', 'FS2', 'S9', 'S6', 'S1', 'S9', 'S4', 'S6', 'S8', 'S8', 'S5', 'S6', 'S2', 'S7', 'S8', 'S7', 'S6', 'S4', 'S9', 'S9', 'WILD', 'S9', 'S9', 'S3', 'WILD', 'FS2', 'S7', 'S9', 'FS2', 'FS1', 'S9', 'S5', 'S9', 'S9', 'WILD', 'S6', 'FS1', 'S6', 'S8', 'S8', 'FS1', 'S7', 'S7', 'FS1', 'S0', 'S9', 'S4', 'S7', 'S8', 'S4', 'S8', 'FS1', 'S9', 'S5']
+];
+
+class Pachislot {
+    constructor() {
+        this.balance = 10000;
+        this.betIndex = 0;
+        this.currentBet = BET_STEPS[0];
+        
+        this.reels = [
+            { el: document.getElementById('reel-0'), symbols: [], isSpinning: false, interval: null, stopBtn: document.getElementById('btn-stop-0') },
+            { el: document.getElementById('reel-1'), symbols: [], isSpinning: false, interval: null, stopBtn: document.getElementById('btn-stop-1') },
+            { el: document.getElementById('reel-2'), symbols: [], isSpinning: false, interval: null, stopBtn: document.getElementById('btn-stop-2') }
+        ];
+
+        this.fsMode = false;
+        this.fsSpinsLeft = 0;
+        this.fsMultiplier = 1;
+        
+        this.isGameActive = false; 
+        this.stopSequence = 0; 
+
+        this.maliIndex = 0;
+        this.maliItems = [];
+
+        this.weather = new WeatherSystem('weather-canvas');
+
+        this.init();
+        this.initVibrationTimer();
+    }
+
+    init() {
+        this.renderPaytable(this.currentBet);
+        this.maliItems = generateMaliItems(2); // Initial placeholder for Mali track
+        this.initMaliTrack();
+        this.renderStripPreview();
+
+        this.updateUI();
+
+        this.reels.forEach((reel, i) => {
+            reel.symbols = this.spinFromStrip(i);
+            this.renderReelStatic(reel);
+            reel.stopBtn.disabled = true;
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Enter') {
+                e.preventDefault();
+                this.spin();
+            } else if (e.code === 'Space') {
+                e.preventDefault();
+                this.handleSpaceStop();
+            }
+        });
+    }
+
+    initMaliTrack() {
+        const track = document.getElementById('mali-track');
+        track.innerHTML = '';
+        
+        this.maliItems.forEach((item, i) => {
+            const div = document.createElement('div');
+            div.className = `mali-cell cell-${i}`;
+            // Hide value if mystery
+            const labelVal = item.type === 'mystery' ? '???' : (item.type === 'coin' ? item.val : '');
+            div.innerHTML = `<span class="val">${item.char}</span><span class="label">${labelVal}</span>`;
+            div.style.color = item.color;
+            track.appendChild(div);
+        });
+
+        const center = document.createElement('div');
+        center.className = 'mali-center';
+        center.innerHTML = `
+            <h3>LITTLE MARY</h3>
+            <p>BONUS GAME</p>
+            <button id="mali-stop-btn" onclick="game.stopMali()" style="padding:10px 20px; font-size:1.2em; font-weight:bold; color:white; background:#e74c3c; border:none; border-radius:5px; cursor:pointer; margin-top:10px; box-shadow: 0 4px #c0392b;">STOP</button>
+        `;
+        track.appendChild(center);
+    }
+
+    initVibrationTimer() {
+        setInterval(() => {
+            // Only trigger vibration if not in Free Spin mode
+            this.triggerVibrationSequence();
+        }, 180000); // Every 3 minutes
+    }
+
+    triggerVibrationSequence() {
+        // Only vibrate if not in Free Spin (Mali) mode
+        if (this.fsMode) {
+            console.log("Vibration skipped: In Free Spin mode.");
+            return;
+        }
+
+        // Random 1 to 5 times
+        const count = Math.floor(Math.random() * 5) + 1; 
+        console.log(`Background vibration triggered: ${count} times`);
+        
+        let i = 0;
+        const vibrate = () => {
+            // Double check fsMode in case it changed during the sequence
+            if (this.fsMode) {
+                console.log("Vibration stopped: Entered Free Spin mode mid-sequence.");
+                return;
+            }
+            document.body.classList.add('vibrating');
+            setTimeout(() => {
+                document.body.classList.remove('vibrating');
+                i++;
+                if (i < count) {
+                    setTimeout(vibrate, 300); 
+                }
+            }, 200); 
+        };
+        vibrate();
+    }
+
+    getRandomSymbol() {
+        let pool = SYMBOLS;
+        if (this.fsMode) {
+            pool = SYMBOLS.filter(s => s.type !== 'fs');
+        }
+        const totalWeight = pool.reduce((sum, s) => sum + s.weight, 0);
+        let random = Math.random() * totalWeight;
+
+        for (let i = 0; i < pool.length; i++) {
+            if (random < pool[i].weight) {
+                return pool[i];
+            }
+            random -= pool[i].weight;
+        }
+        return pool[0]; 
+    }
+
+    renderPaytable(betAmount) {
+        const table = document.getElementById('paytable-body');
+        const betRatio = betAmount / 100;
+        table.innerHTML = `
+            <thead><tr><th>圖標</th><th>獎金 (本局)</th><th>功能</th></tr></thead>
+            <tbody>
+                ${SYMBOLS.map(s => `
+                    <tr>
+                        <td class="symbol-icon">${s.char}</td>
+                        <td>${s.type === 'fs' || s.type === 'wild' ? '-' : Math.round(s.payout * betRatio)}</td>
+                        <td>${s.type === 'wild' ? 'WILD (只作通配)' : (s.type === 'fs' ? `FS x${s.mult}` : '-')}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        `;
+    }
+
+    updateUI() {
+        document.getElementById('balance').innerText = Math.floor(this.balance);
+        document.getElementById('current-bet').innerText = this.currentBet;
+        
+        const fsDisplay = document.getElementById('fs-display');
+        
+        if (this.fsMode) {
+            fsDisplay.style.display = 'block';
+            document.getElementById('fs-mult').innerText = this.fsMultiplier;
+            document.getElementById('fs-count').innerText = this.fsSpinsLeft;
+        } else {
+            fsDisplay.style.display = 'none';
+        }
+    }
+
+    changeBet(dir) {
+        if (this.isGameActive) return; 
+        this.betIndex += dir;
+        if (this.betIndex < 0) this.betIndex = 0;
+        if (this.betIndex >= BET_STEPS.length) this.betIndex = BET_STEPS.length - 1;
+        this.currentBet = BET_STEPS[this.betIndex];
+        this.updateUI();
+        this.renderPaytable(this.currentBet);
+    }
+
+    addCredits() {
+        this.balance += 5000;
+        this.updateUI();
+    }
+
+    spin() {
+        if (this.isGameActive) return; 
+
+        if (this.fsMode) {
+            if (this.fsSpinsLeft > 0) {
+                this.playMaliRound();
+            } else {
+                this.endFreeSpin();
+            }
+            return;
+        }
+
+        if (this.balance < this.currentBet) {
+            alert("餘額不足!");
+            return;
+        }
+
+        this.balance -= this.currentBet;
+        this.isGameActive = true;
+        this.stopSequence = 0;
+        document.getElementById('win-amount').innerText = "0";
+        document.getElementById('machine').classList.remove('win-anim');
+        document.querySelectorAll('.symbol').forEach(el => el.classList.remove('winner'));
+
+        this.updateUI();
+        
+        this.reels.forEach((reel, idx) => {
+            reel.isSpinning = true;
+            reel.stopBtn.disabled = false;
+            reel.stopBtn.innerText = "STOP";
+            this.startReelAnimation(idx);
+        });
+        
+        document.getElementById('btn-start').disabled = true;
+    }
+
+    // --- Little Mary Logic ---
+    playMaliRound() {
+        this.isGameActive = true;
+        this.fsSpinsLeft--;
+        this.updateUI();
+        document.getElementById('btn-start').disabled = true;
+        document.getElementById('win-amount').innerText = "0";
+        document.getElementById('mali-overlay').style.display = 'flex';
+
+        const stopBtn = document.getElementById('mali-stop-btn');
+        if(stopBtn) {
+            stopBtn.disabled = false;
+            stopBtn.innerText = "STOP";
+            stopBtn.style.background = "#e74c3c";
+        }
+
+        this.isMaliStopping = false;
+        this.maliStopIndex = -1;
+
+        let currentIdx = this.maliIndex;
+        let speed = 50;
+
+        const animateMali = () => {
+            document.querySelectorAll('.mali-cell').forEach(el => el.classList.remove('mali-active'));
+            const target = document.querySelector(`.cell-${currentIdx}`);
+            if(target) target.classList.add('mali-active');
+
+            // Check if we need to set the stop target
+            if (this.isMaliStopping && this.maliStopIndex === -1) {
+                 const stepsAhead = Math.floor(Math.random() * 8) + 5;
+                 this.maliStopIndex = (currentIdx + stepsAhead) % this.maliItems.length;
+            }
+
+            // Deceleration and Stop Logic
+            if (this.isMaliStopping && this.maliStopIndex !== -1) {
+                if (currentIdx === this.maliStopIndex) {
+                    // Stopped
+                    this.maliIndex = currentIdx;
+                    this.resolveMaliWin(currentIdx);
+                    return;
+                }
+                
+                // Calculate distance to target to slow down
+                let dist = (this.maliStopIndex - currentIdx + this.maliItems.length) % this.maliItems.length;
+                
+                // Slow down logic
+                if (dist < 8) speed += 20;
+                if (dist < 4) speed += 40;
+                if (dist < 2) speed += 60;
+                
+                currentIdx = (currentIdx + 1) % this.maliItems.length;
+                setTimeout(animateMali, speed);
+            } else {
+                // Keep spinning normal speed
+                currentIdx = (currentIdx + 1) % this.maliItems.length;
+                setTimeout(animateMali, speed);
+            }
+        };
+        animateMali();
+    }
+
+    stopMali() {
+        if (!this.isGameActive) return;
+        
+        // Delegate to mystery stop if spinning prize
+        if (this.isMysterySpinning) {
+            this.stopMysterySpin();
+            return;
+        }
+
+        if (this.isMaliStopping) return;
+        
+        this.isMaliStopping = true;
+        
+        const stopBtn = document.getElementById('mali-stop-btn');
+        if(stopBtn) {
+            stopBtn.disabled = true;
+            stopBtn.innerText = "STOPPED";
+            stopBtn.style.background = "#7f8c8d";
+        }
+    }
+
+    resolveMaliWin(index) {
+        const item = this.maliItems[index];
+        
+        setTimeout(() => {
+            if (item.type === 'mystery') {
+                this.startMysterySpin();
+                return; // Don't finish round yet
+            }
+
+            if (item.type === 'coin') {
+                const finalWin = item.val * (this.currentBet / 100) * this.fsMultiplier;
+                this.balance += finalWin;
+                document.getElementById('win-amount').innerText = Math.floor(finalWin);
+                this.log(`Little Mary: 獲得獎金 ${Math.floor(finalWin)}`, "log-win");
+            } else if (item.type === 'plus') {
+                this.fsSpinsLeft += item.val;
+                this.log(`Little Mary: 獲得額外轉數 +${item.val}`, "log-fs");
+                this.updateUI();
+            }
+
+            this.finishMaliRound();
+        }, 500);
+    }
+
+    finishMaliRound() {
+        this.isGameActive = false;
+        document.getElementById('btn-start').disabled = false;
+        
+        if (this.fsSpinsLeft <= 0) {
+            setTimeout(() => this.endFreeSpin(), 1000);
+        }
+    }
+
+    startMysterySpin() {
+        this.isMysterySpinning = true;
+        
+        // Update UI to show spinning
+        const center = document.querySelector('.mali-center');
+        
+        const stopBtn = document.getElementById('mali-stop-btn');
+        if(stopBtn) {
+            stopBtn.disabled = false;
+            stopBtn.innerText = "STOP PRIZE";
+            stopBtn.style.background = "#9b59b6";
+        }
+
+        this.mysteryPrizes = [75, 100, 150, 200, 250];
+        let pIdx = 0;
+        
+        // Create a display element
+        const display = document.createElement('div');
+        display.id = 'mystery-display';
+        display.style.fontSize = '3em';
+        display.style.color = '#f1c40f';
+        display.style.fontWeight = 'bold';
+        display.innerText = this.mysteryPrizes[0];
+        
+        // Clear center and append display
+        center.innerHTML = '<h3>MYSTERY</h3>';
+        center.appendChild(display);
+        center.appendChild(stopBtn); 
+
+        this.mysteryInterval = setInterval(() => {
+            pIdx = (pIdx + 1) % this.mysteryPrizes.length;
+            display.innerText = this.mysteryPrizes[pIdx];
+        }, 50);
+    }
+
+    stopMysterySpin() {
+        if(!this.isMysterySpinning) return;
+        this.isMysterySpinning = false;
+        clearInterval(this.mysteryInterval);
+        
+        const stopBtn = document.getElementById('mali-stop-btn');
+        if(stopBtn) {
+            stopBtn.disabled = true;
+            stopBtn.innerText = "WIN!";
+            stopBtn.style.background = "#27ae60";
+        }
+
+        const finalPrize = this.mysteryPrizes[Math.floor(Math.random() * this.mysteryPrizes.length)];
+        document.getElementById('mystery-display').innerText = finalPrize;
+        
+        setTimeout(() => {
+            const finalWin = finalPrize * (this.currentBet / 100) * this.fsMultiplier;
+            this.balance += finalWin;
+            document.getElementById('win-amount').innerText = Math.floor(finalWin);
+            this.log(`Little Mary: 神秘大獎獲得 ${Math.floor(finalWin)}`, "log-win");
+            
+            setTimeout(() => {
+                this.initMaliTrack(); // Reset track UI
+                this.finishMaliRound();
+            }, 1500);
+        }, 500);
+    }
+
+    // --- 輪帶內容顯示（靜態 cheat sheet） ---
+    // 只列出 30 slot × 3 輪的符號順序，不 highlight 當前位置 → 目押靠中央 reel 眼力，非作弊
+    renderStripPreview() {
+        const container = document.getElementById('strip-preview');
+        container.innerHTML = '';
+        REEL_STRIPS.forEach((strip, r) => {
+            const col = document.createElement('div');
+            col.className = 'strip-col';
+            const header = document.createElement('div');
+            header.className = 'strip-col-header';
+            header.innerText = `Reel ${r+1}`;
+            col.appendChild(header);
+            strip.forEach((sid, i) => {
+                const cell = document.createElement('div');
+                cell.className = 'strip-cell';
+                cell.innerHTML = `<span class="strip-idx">${String(i).padStart(2,'0')}</span>${SYM_BY_ID[sid].char}`;
+                col.appendChild(cell);
+            });
+            container.appendChild(col);
+        });
+    }
+
+    // --- Reel Logic ---
+    // 依 reel.currentOffset 讀輪帶，回傳 [top, mid, bot] 3 個 Symbol 物件
+    // 目押核心：offset 由動畫確定性推進，停止按下當下的 offset 就是結果
+    windowAtOffset(reelIndex, off) {
+        const strip = REEL_STRIPS[reelIndex];
+        const L = strip.length;
+        return [
+            SYM_BY_ID[strip[off % L]],
+            SYM_BY_ID[strip[(off + 1) % L]],
+            SYM_BY_ID[strip[(off + 2) % L]],
+        ];
+    }
+
+    // 隨機起始 offset（init 用，非 spin 期間）
+    spinFromStrip(reelIndex) {
+        const L = REEL_STRIPS[reelIndex].length;
+        const off = Math.floor(Math.random() * L);
+        this.reels[reelIndex].currentOffset = off;
+        return this.windowAtOffset(reelIndex, off);
+    }
+
+    startReelAnimation(reelIndex) {
+        const reel = this.reels[reelIndex];
+        // 起始 offset：隨機（防止玩家記住起始位置直接算停格）
+        reel.currentOffset = Math.floor(Math.random() * REEL_STRIPS[reelIndex].length);
+        reel.interval = setInterval(() => {
+            reel.currentOffset = (reel.currentOffset + 1) % REEL_STRIPS[reelIndex].length;
+            const win = this.windowAtOffset(reelIndex, reel.currentOffset);
+            // 顯示真實 strip 符號、不模糊 → 玩家目押可讀
+            reel.el.innerHTML = `
+                <div class="symbol">${win[0].char}</div>
+                <div class="symbol">${win[1].char}</div>
+                <div class="symbol">${win[2].char}</div>
+            `;
+        }, SPIN_SPEED_MS);
+    }
+
+    handleSpaceStop() {
+        if (!this.isGameActive) return; 
+        
+        if (this.fsMode) {
+            this.stopMali(); // Delegates to mystery stop if needed
+            return;
+        }
+
+        if (this.stopSequence < 3) {
+            this.stopReel(this.stopSequence);
+        }
+    }
+
+    stopReel(index) {
+        const reel = this.reels[index];
+        if (!reel.isSpinning) return;
+
+        clearInterval(reel.interval);
+        reel.isSpinning = false;
+        reel.stopBtn.disabled = true;
+
+        // 目押機制：停在按下當下的 currentOffset，不重新亂數！
+        reel.symbols = this.windowAtOffset(index, reel.currentOffset);
+
+        this.renderReelStatic(reel);
+
+        if (this.reels.every(r => !r.isSpinning)) {
+            this.onAllStopped();
+        } else {
+            while(this.stopSequence < 3 && !this.reels[this.stopSequence].isSpinning) {
+                this.stopSequence++;
+            }
+        }
+    }
+
+    renderReelStatic(reel) {
+        reel.el.innerHTML = `
+            <div class="symbol" data-id="${reel.symbols[0].id}">${reel.symbols[0].char}</div>
+            <div class="symbol" data-id="${reel.symbols[1].id}">${reel.symbols[1].char}</div>
+            <div class="symbol" data-id="${reel.symbols[2].id}">${reel.symbols[2].char}</div>
+        `;
+    }
+
+    onAllStopped() {
+        this.isGameActive = false;
+        document.getElementById('btn-start').disabled = false;
+        this.stopSequence = 0; 
+        this.checkWin();
+    }
+
+    checkWin() {
+        let totalWin = 0;
+        let winDetails = [];
+        let winningElements = []; 
+
+        const c1 = this.reels[0].symbols;
+        const c2 = this.reels[1].symbols;
+        const c3 = this.reels[2].symbols;
+        const reelEls = [
+            this.reels[0].el.querySelectorAll('.symbol'),
+            this.reels[1].el.querySelectorAll('.symbol'),
+            this.reels[2].el.querySelectorAll('.symbol')
+        ];
+
+        SYMBOLS.forEach(sym => {
+            if (sym.type === 'fs' && this.fsMode) return; 
+            const match = (s) => s.id === sym.id || (s.type === 'wild' && sym.type !== 'fs');
+            const m1 = []; c1.forEach((s, i) => { if(match(s)) m1.push(i); });
+            const m2 = []; c2.forEach((s, i) => { if(match(s)) m2.push(i); });
+            const m3 = []; c3.forEach((s, i) => { if(match(s)) m3.push(i); });
+
+            if (m1.length > 0 && m2.length > 0 && m3.length > 0) {
+                const lines = m1.length * m2.length * m3.length;
+                let betRatio = this.currentBet / 100;
+                let winVal = lines * sym.payout * betRatio; 
+
+                if (winVal > 0) {
+                    totalWin += winVal;
+                    winDetails.push(`${sym.char} ${Math.floor(winVal)}`);
+                }
+
+                m1.forEach(i => winningElements.push(reelEls[0][i]));
+                m2.forEach(i => winningElements.push(reelEls[1][i]));
+                m3.forEach(i => winningElements.push(reelEls[2][i]));
+
+                if (sym.type === 'fs') {
+                    this.triggerFreeSpin(sym);
+                }
+            }
+        });
+
+        if (totalWin > 0 || winningElements.length > 0) {
+            winningElements.forEach(el => el.classList.add('winner'));
+        }
+
+        if (totalWin > 0) {
+            this.balance += totalWin;
+            document.getElementById('win-amount').innerText = Math.floor(totalWin);
+            document.getElementById('machine').classList.add('win-anim');
+            this.log(`中獎! ${winDetails.join(', ')}`, "log-win");
+        }
+        
+        this.updateUI();
+    }
+
+    triggerFreeSpin(fsSymbol) {
+        if (this.fsMode) return; 
+        
+        this.fsMode = true;
+        this.fsMultiplier = fsSymbol.mult;
+        this.fsSpinsLeft = fsSymbol.spins;
+        
+        this.maliItems = generateMaliItems(this.fsMultiplier);
+        this.initMaliTrack();
+
+        this.log(`🎉 觸發小瑪莉 BONUS! (${fsSymbol.spins} 次, 賠率 x${fsSymbol.mult})`, "log-fs");
+
+        // Start Money Rain
+        this.weather.start('money');
+
+        // Set interval for Number Burst (every minute)
+        this.fsTimer = setInterval(() => {
+            const count = Math.floor(Math.random() * 11) + 10; // 10-20
+            this.weather.triggerBurst('numbers', count, 5000); // Lasts 5 seconds
+        }, 60000);
+
+        document.getElementById('mali-overlay').style.display = 'flex';
+    }
+
+    endFreeSpin() {
+        this.fsMode = false;
+        this.fsMultiplier = 1;
+        this.log("Bonus Game 結束", "log-fs");
+        this.updateUI();
+        
+        this.weather.stop();
+        if (this.fsTimer) {
+            clearInterval(this.fsTimer);
+            this.fsTimer = null;
+        }
+        
+        document.getElementById('mali-overlay').style.display = 'none';
+    }
+
+    log(msg, type) {
+        if (type === 'normal') return; 
+        const logDiv = document.getElementById('game-log');
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        const time = new Date().toLocaleTimeString();
+        entry.innerText = `[${time}] ${msg}`;
+        logDiv.prepend(entry);
+    }
+}
+
+const game = new Pachislot();
+
+</script>
+</body>
+</html>
